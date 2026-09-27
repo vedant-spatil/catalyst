@@ -5,8 +5,25 @@ on:
   pull_request:
 
 jobs:
-  test:
+  backend:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: postgresql://catalyst:catalyst@127.0.0.1:5432/catalyst
+      LANDING_ROOT: landing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install and test
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+          python warehouse/apply_migrations.py
+          pytest
     services:
       postgres:
         image: postgres:16
@@ -21,20 +38,19 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
-    env:
-      DATABASE_URL: postgresql://catalyst:catalyst@127.0.0.1:5432/catalyst
-      LANDING_ROOT: landing
+
+  frontend:
+    runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: backend
+        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-node@v4
         with:
-          python-version: "3.12"
-      - name: Install and test Python
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
-          python warehouse/apply_migrations.py
-          pytest
+          node-version: "22"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - run: pnpm install
+      - run: pnpm test
