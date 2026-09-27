@@ -1,0 +1,16 @@
+.env
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+node_modules/
+landing/spotify/
+.DS_Store
+backend/.venv/
+frontend/node_modules/
+frontend/dist/
+markdowns/

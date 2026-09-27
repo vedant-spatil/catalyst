@@ -1,0 +1,66 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: catalyst
+      POSTGRES_PASSWORD: catalyst
+      POSTGRES_DB: catalyst
+    ports:
+      - "5433:5432"
+    volumes:
+      - catalyst_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U catalyst -d catalyst"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      catalyst:
+        ipv4_address: 172.28.28.10
+
+  seed:
+    build: .
+    image: catalyst-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://catalyst:catalyst@postgres:5432/catalyst
+      LANDING_ROOT: /app/landing
+      WEB_ORIGIN: http://127.0.0.1:5173
+    volumes:
+      - ./landing:/app/landing
+      - ./seeds:/app/seeds
+    command: ["python", "seed.py"]
+    extra_hosts:
+      - "postgres:172.28.28.10"
+    networks:
+      - catalyst
+
+  api:
+    build: .
+    image: catalyst-api
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    ports:
+      - "4000:4000"
+    environment:
+      DATABASE_URL: postgresql://catalyst:catalyst@postgres:5432/catalyst
+      WEB_ORIGIN: http://127.0.0.1:5173
+      API_PORT: "4000"
+      API_HOST: "0.0.0.0"
+    command: python -m catalog_api
+    extra_hosts:
+      - "postgres:172.28.28.10"
+    networks:
+      - catalyst
+
+networks:
+  catalyst:
+    ipam:
+      config:
+        - subnet: 172.28.28.0/24
+
+volumes:
+  catalyst_pg:
